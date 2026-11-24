@@ -21,6 +21,9 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-24.04
+    # DOCKERHUB_USERNAME and DOCKERHUB_TOKEN are environment secrets of the
+    # DockerHub environment; a job only sees them when it declares it.
+    environment: DockerHub
     strategy:
       fail-fast: false
       matrix:

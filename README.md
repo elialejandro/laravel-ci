@@ -132,8 +132,9 @@ dispatch, and monthly (1st of the month) to pick up security patches. For each P
 2. reads the PHP version from that image to derive the tags (`8.4`, `8.4.28`, and `latest` for 8.4);
 3. builds and pushes `linux/amd64` + `linux/arm64` with those tags.
 
-Required repository secrets: `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a Docker Hub access token
-with read/write scope).
+Required secrets, in a GitHub environment named `DockerHub` (Settings → Environments): `DOCKERHUB_USERNAME`
+and `DOCKERHUB_TOKEN` (a Docker Hub access token with read/write scope). The `publish` job declares
+`environment: DockerHub`; without it the job cannot read environment secrets.
 
 GitHub disables scheduled workflows after 60 days without repository activity; re-enable it from
 the Actions tab, or run it manually, if that happens.

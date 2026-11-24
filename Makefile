@@ -1,4 +1,4 @@
-IMAGE ?= elialejandro/laravel-ci
+IMAGE ?= rurounize/laravel-ci
 PHP_VERSION ?= 8.4
 TAG := $(IMAGE):$(PHP_VERSION)-local
 

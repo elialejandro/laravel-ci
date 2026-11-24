@@ -1,6 +1,6 @@
 # laravel-ci
 
-A PHP CLI image for running Laravel test suites in CI: `elialejandro/laravel-ci`.
+A PHP CLI image for running Laravel test suites in CI: `rurounize/laravel-ci`.
 
 It exists so CI jobs stop installing PHP on every run, and so the test suite can use
 in-memory SQLite with SQLite >= 3.44 (needed for `CONCAT`, `GROUP_CONCAT ... ORDER BY`).
@@ -22,7 +22,7 @@ The image ships a self-check, `laravel-ci-check`, which runs during the build an
 SQLite is older than 3.44, a required extension is missing, or Composer is not 2.x:
 
 ```sh
-docker run --rm elialejandro/laravel-ci:8.4 laravel-ci-check
+docker run --rm rurounize/laravel-ci:8.4 laravel-ci-check
 ```
 
 ## Tags
@@ -44,7 +44,7 @@ behaviour between runs. Bump the patch tag on purpose. The floating tag is for c
 ### Bitbucket Pipelines
 
 ```yaml
-image: elialejandro/laravel-ci:8.4.28
+image: rurounize/laravel-ci:8.4.28
 
 definitions:
   caches:
@@ -70,7 +70,7 @@ pipeline {
     stage('Tests') {
       steps {
         script {
-          docker.image('elialejandro/laravel-ci:8.4.28').inside('-u root') {
+          docker.image('rurounize/laravel-ci:8.4.28').inside('-u root') {
             sh 'composer install --no-interaction --prefer-dist'
             sh 'php artisan test'
           }
@@ -91,7 +91,7 @@ jobs:
   tests:
     runs-on: ubuntu-24.04
     container:
-      image: elialejandro/laravel-ci:8.4.28
+      image: rurounize/laravel-ci:8.4.28
     steps:
       - uses: actions/checkout@v7
       - uses: actions/cache@v6
@@ -105,7 +105,7 @@ jobs:
 ## Build and verify locally
 
 ```sh
-make check                    # builds elialejandro/laravel-ci:8.4-local and runs laravel-ci-check
+make check                    # builds rurounize/laravel-ci:8.4-local and runs laravel-ci-check
 make check PHP_VERSION=8.5    # same for 8.5
 make build-all                # both versions
 ```
@@ -113,14 +113,14 @@ make build-all                # both versions
 Equivalent without make:
 
 ```sh
-docker build --build-arg PHP_VERSION=8.4 -t elialejandro/laravel-ci:8.4-local .
-docker run --rm elialejandro/laravel-ci:8.4-local laravel-ci-check
+docker build --build-arg PHP_VERSION=8.4 -t rurounize/laravel-ci:8.4-local .
+docker run --rm rurounize/laravel-ci:8.4-local laravel-ci-check
 ```
 
 Check a project's platform requirements against the image (read-only mount):
 
 ```sh
-docker run --rm -v "$PWD":/app:ro elialejandro/laravel-ci:8.4-local composer check-platform-reqs --lock
+docker run --rm -v "$PWD":/app:ro rurounize/laravel-ci:8.4-local composer check-platform-reqs --lock
 ```
 
 ## Publishing

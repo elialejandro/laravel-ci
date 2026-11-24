@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE: elialejandro/laravel-ci
+  IMAGE: rurounize/laravel-ci
 
 jobs:
   publish:

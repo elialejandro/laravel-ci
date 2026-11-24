@@ -1,0 +1,83 @@
+name: Publish image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Monthly rebuild to pick up Ubuntu and PHP security patches.
+    - cron: "0 6 1 * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: elialejandro/laravel-ci
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.4", "8.5"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build linux/amd64 for verification
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          build-args: PHP_VERSION=${{ matrix.php }}
+          load: true
+          tags: laravel-ci:verify
+          cache-from: type=gha,scope=php-${{ matrix.php }}
+          cache-to: type=gha,scope=php-${{ matrix.php }},mode=max
+
+      - name: Run self-check
+        run: docker run --rm laravel-ci:verify laravel-ci-check
+
+      - name: Resolve tags from the built image
+        id: tags
+        run: |
+          version=$(docker run --rm laravel-ci:verify php -r 'echo PHP_VERSION;')
+          case "$version" in
+            "${{ matrix.php }}".*) ;;
+            *) echo "::error::Built PHP $version does not match matrix ${{ matrix.php }}"; exit 1 ;;
+          esac
+          tags="${IMAGE}:${{ matrix.php }},${IMAGE}:${version}"
+          if [ "${{ matrix.php }}" = "8.4" ]; then
+            tags="${tags},${IMAGE}:latest"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          echo "Publishing: $tags" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push linux/amd64 + linux/arm64
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          build-args: PHP_VERSION=${{ matrix.php }}
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=php-${{ matrix.php }}
+          cache-to: type=gha,scope=php-${{ matrix.php }},mode=max

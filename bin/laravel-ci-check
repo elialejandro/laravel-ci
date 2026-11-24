@@ -1,0 +1,54 @@
+#!/bin/sh
+# Self-check for the laravel-ci image. Exits non-zero when the image does not
+# meet the guarantees documented in README.md.
+set -eu
+
+MIN_SQLITE_VERSION="3.44.0"
+REQUIRED_EXTENSIONS="bcmath ctype curl dom fileinfo gd iconv intl mbstring openssl pcntl pdo_sqlite posix redis sodium sqlite3 xml xmlreader xmlwriter zip"
+
+failures=0
+fail() {
+    echo "FAIL: $*" >&2
+    failures=$((failures + 1))
+}
+
+php_version=$(php -r 'echo PHP_VERSION;')
+echo "PHP:      ${php_version}"
+
+if [ -n "${PHP_VERSION:-}" ]; then
+    case "${php_version}" in
+        "${PHP_VERSION}".*) ;;
+        *) fail "expected PHP ${PHP_VERSION}.x, got ${php_version}" ;;
+    esac
+fi
+
+sqlite_version=$(php -r 'echo (new PDO("sqlite::memory:"))->query("select sqlite_version()")->fetchColumn();')
+echo "SQLite:   ${sqlite_version} (pdo_sqlite)"
+if ! php -r "exit(version_compare('${sqlite_version}', '${MIN_SQLITE_VERSION}', '>=') ? 0 : 1);"; then
+    fail "SQLite ${sqlite_version} is older than ${MIN_SQLITE_VERSION}"
+fi
+
+loaded_extensions=$(php -m | tr '[:upper:]' '[:lower:]')
+for extension in ${REQUIRED_EXTENSIONS}; do
+    if ! printf '%s\n' "${loaded_extensions}" | grep -qx "${extension}"; then
+        fail "missing PHP extension: ${extension}"
+    fi
+done
+echo "Extensions: ${REQUIRED_EXTENSIONS}"
+
+composer_version=$(composer --version --no-ansi 2>/dev/null | awk '{print $3}')
+echo "Composer: ${composer_version}"
+case "${composer_version}" in
+    2.*) ;;
+    *) fail "expected Composer 2.x, got '${composer_version}'" ;;
+esac
+
+for tool in git unzip; do
+    command -v "${tool}" >/dev/null 2>&1 || fail "missing tool: ${tool}"
+done
+
+if [ "${failures}" -gt 0 ]; then
+    echo "laravel-ci-check: ${failures} check(s) failed" >&2
+    exit 1
+fi
+echo "laravel-ci-check: OK"
